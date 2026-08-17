@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" fill="none">
+  <!-- Book left page -->
+  <path d="M2 6L2 26L10 28L10 8L2 6Z" fill="#3b82f6" opacity="0.9" />
+  <!-- Book right page -->
+  <path d="M18 8L18 28L10 26L10 6L18 8Z" fill="#2563eb" opacity="0.9" />
+  <!-- Book spine -->
+  <rect x="9" y="5" width="2" height="22" rx="1" fill="#1d4ed8" />
+  <!-- Chart line (rising) -->
+  <polyline points="4,21 7,18 9,19 12,12 15,14 17,8" stroke="#14b8a6" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+  <!-- Small dot at end of line -->
+  <circle cx="17" cy="8" r="1.2" fill="#14b8a6" />
+</svg>

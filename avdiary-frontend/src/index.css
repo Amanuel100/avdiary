@@ -1,0 +1,150 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ----- Global resets & base styles ----- */
+@layer base {
+    body {
+        @apply bg-av-bg text-av-text antialiased;
+        font-family: 'Inter', system-ui, sans-serif;
+    }
+
+    /* Custom dark scrollbar */
+    ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: #1e293b;
+        border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #334155;
+    }
+}
+
+/* ----- Reusable AvDiary component classes ----- */
+@layer components {
+
+    /* Glassmorphism card – used everywhere */
+    .glass-card {
+        @apply bg-av-surface/80 backdrop-blur-md border border-av-border rounded-2xl shadow-lg;
+    }
+
+    /* Interactive glass card with hover effects */
+    .glass-card-interactive {
+        @apply glass-card transition-all duration-300 hover:border-av-primary/30 hover:shadow-xl;
+    }
+
+    /* Primary action button */
+    .btn-av-primary {
+        @apply px-4 py-2 rounded-xl font-medium bg-av-primary text-white hover:bg-blue-600 active:scale-95 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-av-primary/50;
+    }
+
+    /* Ghost / secondary button */
+    .btn-av-ghost {
+        @apply px-4 py-2 rounded-xl font-medium bg-transparent border border-av-border text-av-text hover:bg-av-border/30 active:scale-95 transition-all duration-200;
+    }
+
+    /* Input field */
+    .input-av {
+        @apply w-full bg-av-bg border border-av-border rounded-xl px-4 py-2.5 text-av-text placeholder-av-muted focus:outline-none focus:border-av-primary focus:ring-1 focus:ring-av-primary/50 transition-colors;
+    }
+}
+
+/* ----- Utility classes ----- */
+@layer utilities {
+
+    /* Hide scrollbar but keep functionality */
+    .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Shimmer loading animation */
+    .shimmer {
+        background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+        background-size: 200% 100%;
+        animation: shimmer-anim 1.5s infinite;
+    }
+
+    @keyframes shimmer-anim {
+        0% {
+            background-position: 200% 0;
+        }
+
+        100% {
+            background-position: -200% 0;
+        }
+    }
+}
+/* Light mode overrides */
+body.light {
+    background-color: #f8fafc;
+    color: #0f172a;
+}
+
+body.light .glass-card {
+    background-color: rgba(255, 255, 255, 0.85);
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 24px -4px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+body.light .glass-card-interactive {
+    background-color: rgba(255, 255, 255, 0.85);
+    border-color: #cbd5e1;
+}
+
+body.light .input-av {
+    background-color: #ffffff;
+    border-color: #cbd5e1;
+    color: #0f172a;
+}
+
+body.light .input-av::placeholder {
+    color: #64748b;
+}
+
+body.light .btn-av-ghost {
+    color: #334155;
+    border-color: #cbd5e1;
+}
+
+body.light .btn-av-ghost:hover {
+    background-color: #e2e8f0;
+    color: #0f172a;
+}
+
+body.light .text-av-muted {
+    color: #475569 !important;
+}
+
+body.light .text-av-text {
+    color: #0f172a !important;
+}
+
+body.light .bg-av-bg {
+    background-color: #f1f5f9 !important;
+}
+
+body.light .bg-av-surface {
+    background-color: #ffffff !important;
+}
+
+body.light .border-av-border {
+    border-color: #cbd5e1 !important;
+}
+
+body.light .shimmer {
+    background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+}
