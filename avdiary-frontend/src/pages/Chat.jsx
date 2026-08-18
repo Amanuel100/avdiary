@@ -1,3 +1,4 @@
+import { API_BASE, BACKEND_URL } from '../config';
 import { useState, useRef, useEffect } from 'react';
 import { Bot, User, Send, Mic, MicOff } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -38,7 +39,7 @@ export default function ChatPage() {
 
     try {
       const token = localStorage.getItem('avdiary-token');
-      const res = await fetch('http://localhost:5000/api/ai/chat', {
+      const res = await fetch(`${API_BASE}/ai/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

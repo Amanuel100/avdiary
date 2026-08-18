@@ -211,7 +211,8 @@ router.post('/forgot-password', async (req, res) => {
     if (users.length === 0) {
       console.log(`[ForgotPassword] ❌ No user found for ${email} – still returning success`);
       // Still print a fake reset link for testing (no token, just for demo)
-      console.log(`🔗 (DEMO) Reset link: http://localhost:3000/reset-password?token=no-user-found`);
+      const frontendURL = process.env.FRONTEND_URL || 'http://localhost:3000';
+console.log(`🔗 (DEMO) Reset link: ${frontendURL}/reset-password?token=no-user-found`);
       return res.status(200).json({ message: 'If that email exists, a reset link has been sent.' });
     }
 
@@ -245,7 +246,7 @@ router.post('/forgot-password', async (req, res) => {
     }
 
     // ALWAYS print the reset link to the terminal
-    console.log(`🔗 RESET LINK for ${email}: http://localhost:3000/reset-password?token=${token}`);
+    console.log(`🔗 Reset link for ${email}: ${frontendURL}/reset-password?token=${token}`);
 
     return res.status(200).json({ message: 'If that email exists, a reset link has been sent.' });
   } catch (error) {

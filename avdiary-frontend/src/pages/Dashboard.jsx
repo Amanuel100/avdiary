@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { API_BASE, BACKEND_URL } from '../config';
 import { Link } from 'react-router-dom';
 import {
   TrendingUp, Target, CalendarCheck, BarChart3,
@@ -118,7 +119,7 @@ export default function Dashboard() {
         // ---------- Fetch real AI coaching insight ----------
         try {
           const token = localStorage.getItem('avdiary-token');
-          const coachingRes = await fetch('http://localhost:5000/api/ai/coaching', {
+          const coachingRes = await fetch(`${API_BASE}/ai/chat`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${token}`,

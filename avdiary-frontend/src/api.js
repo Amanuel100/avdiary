@@ -1,5 +1,6 @@
-const API_BASE = 'http://localhost:5000/api';
-export const BACKEND_URL = 'http://localhost:5000';
+import { API_BASE, BACKEND_URL } from './config';
+
+export { BACKEND_URL };
 
 /**
  * Helper function to make authenticated requests.

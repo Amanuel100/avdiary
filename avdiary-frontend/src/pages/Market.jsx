@@ -1,3 +1,4 @@
+import { API_BASE, BACKEND_URL } from '../config';
 import { useState, useEffect, useRef } from 'react';
 import { Clock, Calendar, RefreshCw, Folder, WifiOff, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -129,7 +130,7 @@ const fetchTimes = async () => {
     saturday.setDate(sunday.getDate() + 6);
 
     const fmt = d => d.toISOString().slice(0, 10);
-    const url = `http://localhost:5000/api/calendar?from=${fmt(sunday)}&to=${fmt(saturday)}`;
+    const url = `${API_BASE}/calendar?from=${fmt(sunday)}&to=${fmt(saturday)}`;
 
     const res = await fetch(url);
     if (!res.ok) throw new Error('fetch failed');

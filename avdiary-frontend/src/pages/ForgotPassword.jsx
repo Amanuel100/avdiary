@@ -1,3 +1,4 @@
+import { API_BASE, BACKEND_URL } from '../config';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
@@ -13,7 +14,7 @@ export default function ForgotPassword() {
     if (!email) { toast.error('Email is required'); return; }
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5000/api/auth/forgot-password', {
+      const res = await fetch(`${API_BASE}/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),

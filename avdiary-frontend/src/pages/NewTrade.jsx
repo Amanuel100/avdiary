@@ -1,3 +1,4 @@
+import { API_BASE, BACKEND_URL } from '../config';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -125,7 +126,7 @@ export default function NewTradePage() {
       };
 
       const token = localStorage.getItem('avdiary-token');
-      const res = await fetch('http://localhost:5000/api/trades', {
+      const res = await fetch(`${API_BASE}/trades`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

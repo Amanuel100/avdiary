@@ -1,15 +1,14 @@
 -- AvDiary Database Setup
--- Create the database (if not exists)
 CREATE DATABASE IF NOT EXISTS avdiary CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE avdiary;
 
 -- 1. Users table
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   email VARCHAR(255) NOT NULL UNIQUE,
-  password VARCHAR(255) NULL COMMENT 'NULL for Google OAuth users',
-  image VARCHAR(500) NULL,
+  password VARCHAR(255) NULL COMMENT 'NULL for OAuth users',
+  image VARCHAR(255) NULL COMMENT 'Profile picture URL',
   role ENUM('user','admin') DEFAULT 'user',
   subscription_tier VARCHAR(20) DEFAULT 'free',
   subscription_expiry DATETIME NULL,
@@ -20,8 +19,8 @@ CREATE TABLE users (
   FOREIGN KEY (referred_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
--- 2. Trades table
-CREATE TABLE trades (
+-- 2. Trades table (journal entries)
+CREATE TABLE IF NOT EXISTS trades (
   id VARCHAR(36) PRIMARY KEY,
   user_id INT NOT NULL,
   pair VARCHAR(10) NOT NULL,
@@ -43,8 +42,8 @@ CREATE TABLE trades (
 CREATE INDEX idx_trades_user ON trades(user_id);
 CREATE INDEX idx_trades_date ON trades(date);
 
--- 3. Messages table
-CREATE TABLE messages (
+-- 3. Messages table (AI & admin messages)
+CREATE TABLE IF NOT EXISTS messages (
   id VARCHAR(36) PRIMARY KEY,
   user_id INT NOT NULL,
   type ENUM('ai','admin') NOT NULL DEFAULT 'ai',
@@ -56,8 +55,8 @@ CREATE TABLE messages (
 
 CREATE INDEX idx_messages_user ON messages(user_id);
 
--- 4. Payments table
-CREATE TABLE payments (
+-- 4. Payments table (subscription payments)
+CREATE TABLE IF NOT EXISTS payments (
   id VARCHAR(36) PRIMARY KEY,
   user_id INT NOT NULL,
   plan VARCHAR(20) NOT NULL,
@@ -73,30 +72,11 @@ CREATE TABLE payments (
 CREATE INDEX idx_payments_user ON payments(user_id);
 CREATE INDEX idx_payments_status ON payments(status);
 
--- 5. Insert admin user (password: aman922423 hashed with bcrypt 12 rounds)
-INSERT INTO users (name, email, password, role) 
-VALUES ('Admin', 'amanjob', '$2a$12$sO0ZgL0b5w1Wv4Uv2B4vOuEJ2j5ZL0oFEWK0Kq4eDf6QcGt9Aa1hq', 'admin');
-
-
-
-
-
-
-
-
-
-
-
-
-
---below is one by one 
-ALTER TABLE users MODIFY COLUMN image MEDIUMTEXT;
-
-
-CREATE TABLE calendar_events (
+-- 5. Calendar events (economic calendar managed by admin)
+CREATE TABLE IF NOT EXISTS calendar_events (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  event_date DATE NOT NULL,                -- Ethiopian date (EAT)
-  event_time TIME NOT NULL,                -- Ethiopian time (EAT, e.g. '03:30:00')
+  event_date DATE NOT NULL,
+  event_time TIME NOT NULL,
   currency VARCHAR(10) NOT NULL,
   event VARCHAR(255) NOT NULL,
   impact ENUM('high','medium','low') NOT NULL DEFAULT 'low',
@@ -106,15 +86,28 @@ CREATE TABLE calendar_events (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
+CREATE INDEX idx_calendar_date ON calendar_events(event_date);
 
+-- 6. Password resets (for Forgot Password flow)
 CREATE TABLE IF NOT EXISTS password_resets (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
   token VARCHAR(255) NOT NULL,
   expires DATETIME NOT NULL,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
+) ENGINE=InnoDB;
+
+CREATE INDEX idx_password_resets_token ON password_resets(token);
+
+-- 7. Insert default admin user (password: aman922423)
+-- Replace the hash below with a fresh bcrypt hash if needed.
+INSERT INTO users (name, email, password, role) 
+VALUES ('Admin', 'amanjob', '$2a$12$PyYAbfWRuJslbM3RB7eorunMVejnPz1UEBTlWBYiEf7lfa/WUk3hi', 'admin')
+ON DUPLICATE KEY UPDATE role='admin';
 
 
-ALTER TABLE trades ADD COLUMN rr INT DEFAULT NULL AFTER pnl;
-
+ALTER TABLE trades
+  ADD COLUMN risk_reward DECIMAL(10,2) DEFAULT NULL,
+  ADD COLUMN tp_type VARCHAR(20) DEFAULT NULL,
+  ADD COLUMN sl_type VARCHAR(20) DEFAULT NULL,
+  ADD COLUMN breakeven TINYINT(1) DEFAULT 0;

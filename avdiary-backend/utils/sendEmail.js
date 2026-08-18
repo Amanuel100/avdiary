@@ -1,7 +1,8 @@
 const { Resend } = require('resend');
 
 async function sendPasswordResetEmail(to, token) {
-  const resetUrl = `http://localhost:3000/reset-password?token=${token}`;
+  const frontendURL = process.env.FRONTEND_URL || 'http://localhost:3000';
+const resetUrl = `${frontendURL}/reset-password?token=${token}`;
   console.log(`[Email] Sending reset email to ${to} …`);
 
   if (process.env.RESEND_API_KEY) {
