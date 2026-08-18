@@ -106,8 +106,24 @@ VALUES ('Admin', 'amanjob', '$2a$12$PyYAbfWRuJslbM3RB7eorunMVejnPz1UEBTlWBYiEf7l
 ON DUPLICATE KEY UPDATE role='admin';
 
 
+
+
+
+
+
+
+
+
+
+
+
+-- this is for update
 ALTER TABLE trades
   ADD COLUMN risk_reward DECIMAL(10,2) DEFAULT NULL,
   ADD COLUMN tp_type VARCHAR(20) DEFAULT NULL,
   ADD COLUMN sl_type VARCHAR(20) DEFAULT NULL,
   ADD COLUMN breakeven TINYINT(1) DEFAULT 0;
+
+  --this is seconde update
+
+  ALTER TABLE users MODIFY COLUMN image MEDIUMTEXT;
