@@ -26,7 +26,6 @@ function formatTime12(eventTime) {
 }
 
 function getDayInfo(dateStr) {
-  // Build a Date object at midnight Cairo time (UTC+3)
   const d = new Date(dateStr + 'T00:00:00+03:00');
   const day = d.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'Africa/Cairo' });
   const dayDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'Africa/Cairo' });
@@ -42,7 +41,7 @@ router.get('/', async (req, res) => {
     }
 
     const [rows] = await pool.execute(
-      `SELECT id, event_date, event_time, currency, event, impact, actual, forecast, previous
+      `SELECT id, event_date, event_time, currency, event, impact, actual, forecast, previous, is_all_day
        FROM calendar_events
        WHERE event_date >= ? AND event_date <= ?
        ORDER BY event_date, event_time`,
@@ -50,22 +49,23 @@ router.get('/', async (req, res) => {
     );
 
     const events = rows.map(row => {
-      const cairoDate = dateToStr(row.event_date);   // e.g. "2026-08-02"
+      const cairoDate = dateToStr(row.event_date);
       const iso = cairoToISO(row.event_date, row.event_time);
       const { day, dayDate } = getDayInfo(cairoDate);
       return {
         id: row.id,
-        date: iso,                    // UTC ISO for relative‑time calculation
+        date: iso,
         time: formatTime12(row.event_time),
         day,
         dayDate,
-        adjustedISO: cairoDate,      // ← use the original Cairo date for grouping
+        adjustedISO: cairoDate,
         currency: row.currency,
         event: row.event,
         impact: row.impact,
         actual: row.actual || '',
         forecast: row.forecast || '',
         previous: row.previous || '',
+        is_all_day: row.is_all_day || 0,   // ← new
       };
     });
 
@@ -76,7 +76,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// ---------- Admin routes (unchanged) ----------
+// ---------- Admin routes ----------
 const adminRouter = express.Router();
 adminRouter.use(express.json());
 adminRouter.use(authenticateToken);
@@ -84,14 +84,16 @@ adminRouter.use(requireAdmin);
 
 adminRouter.post('/', async (req, res) => {
   try {
-    const { event_date, event_time, currency, event, impact, actual, forecast, previous } = req.body;
-    if (!event_date || !event_time || !currency || !event) {
+    const { event_date, event_time, currency, event, impact, actual, forecast, previous, is_all_day } = req.body;
+    if (!event_date || !currency || !event) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
+    // If it's all-day, we don't require time; but we still need a time value for DB (use '00:00')
+    const timeValue = event_time || '00:00';
     await pool.execute(
-      `INSERT INTO calendar_events (event_date, event_time, currency, event, impact, actual, forecast, previous)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [event_date, event_time, currency, event, impact, actual || null, forecast || null, previous || null]
+      `INSERT INTO calendar_events (event_date, event_time, currency, event, impact, actual, forecast, previous, is_all_day)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [event_date, timeValue, currency, event, impact, actual || null, forecast || null, previous || null, is_all_day ? 1 : 0]
     );
     return res.status(201).json({ message: 'Event created' });
   } catch (error) {
@@ -103,11 +105,12 @@ adminRouter.post('/', async (req, res) => {
 adminRouter.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { event_date, event_time, currency, event, impact, actual, forecast, previous } = req.body;
+    const { event_date, event_time, currency, event, impact, actual, forecast, previous, is_all_day } = req.body;
+    const timeValue = event_time || '00:00';
     await pool.execute(
       `UPDATE calendar_events SET event_date=?, event_time=?, currency=?, event=?, impact=?,
-        actual=?, forecast=?, previous=? WHERE id=?`,
-      [event_date, event_time, currency, event, impact, actual || null, forecast || null, previous || null, id]
+        actual=?, forecast=?, previous=?, is_all_day=? WHERE id=?`,
+      [event_date, timeValue, currency, event, impact, actual || null, forecast || null, previous || null, is_all_day ? 1 : 0, id]
     );
     return res.status(200).json({ message: 'Event updated' });
   } catch (error) {

@@ -2,7 +2,7 @@ import { API_BASE, BACKEND_URL } from '../config';
 import { useState, useEffect, useRef } from 'react';
 import { Clock, Calendar, RefreshCw, Folder, WifiOff, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
 
-// ---------- Session intervals in Ethiopian time (EAT) – unchanged ----------
+// ---------- Session intervals (unchanged) ----------
 const sydneyHours = [[0, 4], [18, 24]];
 const tokyoHours   = [[0, 7], [21, 24]];
 const londonHours  = [[4, 14]];
@@ -15,36 +15,31 @@ const sessionColors = {
   newYork: '#b91c1c',
 };
 
-// ---------- Relative time helper (handles Invalid Date) ----------
 function getRelativeTime(eventDateStr, nowCairo) {
   const eventDate = new Date(eventDateStr);
-  if (isNaN(eventDate.getTime())) return '';   // ignore broken dates
-
+  if (isNaN(eventDate.getTime())) return '';
   const now = nowCairo || new Date(new Date().toLocaleString('en-US', { timeZone: 'Africa/Cairo' }));
   const diffMs = eventDate - now;
   const absMs = Math.abs(diffMs);
   const absTotalMinutes = Math.floor(absMs / 60000);
 
   if (absTotalMinutes < 1) return 'Just now';
-
   if (absTotalMinutes < 1440) {
     const hours = Math.floor(absTotalMinutes / 60);
     const minutes = absTotalMinutes % 60;
     const hhmm = `${hours}h ${String(minutes).padStart(2, '0')}m`;
     return diffMs >= 0 ? `in ${hhmm}` : `${hhmm} ago`;
   }
-
   const absDiffDays = Math.floor(absTotalMinutes / 1440);
   if (absDiffDays < 7) {
     return diffMs >= 0
       ? `in ${absDiffDays} day${absDiffDays > 1 ? 's' : ''}`
       : `${absDiffDays} day${absDiffDays > 1 ? 's' : ''} ago`;
   }
-
   return eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-// ---------- Mini animated particles ----------
+// ---------- SessionParticles component (unchanged) ----------
 function SessionParticles() {
   const canvasRef = useRef(null);
   useEffect(() => {
@@ -83,65 +78,52 @@ export default function Market() {
   const [times, setTimes] = useState(null);
   const [events, setEvents] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
-  const [weekOffset, setWeekOffset] = useState(0);  // -1, 0, 1 only
+  const [weekOffset, setWeekOffset] = useState(0);
 
-const fetchTimes = async () => {
-  setTimes(null);
-  try {
-    // 1. Fetch accurate UTC time from WorldTimeAPI
-    const utcRes = await fetch('https://worldtimeapi.org/api/timezone/Etc/UTC');
-    if (!utcRes.ok) throw new Error('time fail');
-    const utcData = await utcRes.json();
+  const fetchTimes = async () => {
+    setTimes(null);
+    try {
+      const utcRes = await fetch('https://worldtimeapi.org/api/timezone/Etc/UTC');
+      if (!utcRes.ok) throw new Error('time fail');
+      const utcData = await utcRes.json();
+      const utcDate = new Date(utcData.datetime);
+      const cairoDate = new Date(utcDate.toLocaleString('en-US', { timeZone: 'Africa/Cairo' }));
+      const addisDate = new Date(utcDate.toLocaleString('en-US', { timeZone: 'Africa/Addis_Ababa' }));
+      cairoDate.setMinutes(cairoDate.getMinutes());
+      addisDate.setMinutes(addisDate.getMinutes());
+      setTimes({ cairo: cairoDate, addis: addisDate });
+    } catch (err) {
+      console.error('Time fetch error (using local fallback):', err);
+      const now = new Date();
+      const cairoFallback = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Cairo' }));
+      const addisFallback = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Addis_Ababa' }));
+      cairoFallback.setMinutes(cairoFallback.getMinutes());
+      addisFallback.setMinutes(addisFallback.getMinutes());
+      setTimes({ cairo: cairoFallback, addis: addisFallback });
+    }
+  };
 
-    // 2. Create a Date object from the UTC datetime string
-    const utcDate = new Date(utcData.datetime);
-
-    // 3. Derive Cairo and Addis Ababa times using toLocaleString with their timezones
-    const cairoDate = new Date(utcDate.toLocaleString('en-US', { timeZone: 'Africa/Cairo' }));
-    const addisDate = new Date(utcDate.toLocaleString('en-US', { timeZone: 'Africa/Addis_Ababa' }));
-
-    // 4. Add the 15‑minute shift (as before)
-    cairoDate.setMinutes(cairoDate.getMinutes());
-    addisDate.setMinutes(addisDate.getMinutes());
-
-    setTimes({ cairo: cairoDate, addis: addisDate });
-  } catch (err) {
-    console.error('Time fetch error (using local fallback):', err);
-    // Fallback to device time (still using timezones, but may be affected by VPN)
-    const now = new Date();
-    const cairoFallback = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Cairo' }));
-    const addisFallback = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Addis_Ababa' }));
-    cairoFallback.setMinutes(cairoFallback.getMinutes());
-    addisFallback.setMinutes(addisFallback.getMinutes());
-    setTimes({ cairo: cairoFallback, addis: addisFallback });
-  }
-};
-
- const fetchCalendar = async () => {
-  setLoadingEvents(true);
-  try {
-    // Use Ethiopian time to determine the current week (starts Sunday)
-    const nowEthiopia = new Date(new Date().toLocaleString('en-US', { timeZone: 'Africa/Addis_Ababa' }));
-    // Find the most recent Sunday (or today if it is Sunday)
-    const sunday = new Date(nowEthiopia);
-    sunday.setDate(nowEthiopia.getDate() - nowEthiopia.getDay() + weekOffset * 7);
-    sunday.setHours(0, 0, 0, 0);
-    const saturday = new Date(sunday);
-    saturday.setDate(sunday.getDate() + 6);
-
-    const fmt = d => d.toISOString().slice(0, 10);
-    const url = `${API_BASE}/calendar?from=${fmt(sunday)}&to=${fmt(saturday)}`;
-
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('fetch failed');
-    const data = await res.json();
-    setEvents(data.events || []);
-  } catch (err) {
-    console.error(err);
-  } finally {
-    setLoadingEvents(false);
-  }
-};
+  const fetchCalendar = async () => {
+    setLoadingEvents(true);
+    try {
+      const nowEthiopia = new Date(new Date().toLocaleString('en-US', { timeZone: 'Africa/Addis_Ababa' }));
+      const sunday = new Date(nowEthiopia);
+      sunday.setDate(nowEthiopia.getDate() - nowEthiopia.getDay() + weekOffset * 7);
+      sunday.setHours(0, 0, 0, 0);
+      const saturday = new Date(sunday);
+      saturday.setDate(sunday.getDate() + 6);
+      const fmt = d => d.toISOString().slice(0, 10);
+      const url = `${API_BASE}/calendar?from=${fmt(sunday)}&to=${fmt(saturday)}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('fetch failed');
+      const data = await res.json();
+      setEvents(data.events || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingEvents(false);
+    }
+  };
 
   useEffect(() => { fetchTimes(); const iv = setInterval(fetchTimes, 60000); return () => clearInterval(iv); }, []);
   useEffect(() => { fetchCalendar(); }, [weekOffset]);
@@ -219,7 +201,7 @@ const fetchTimes = async () => {
         <div><p className="text-sm text-av-text">⚠️ All event times are in <strong className="text-yellow-400">Cairo time zone (EET/EEST)</strong>, not in <strong className="text-yellow-400">Addis Ababa</strong>.</p></div>
       </div>
 
-      {/* Economic Calendar – real data */}
+      {/* Economic Calendar */}
       <div className="glass-card p-5 border border-av-border/50 rounded-2xl">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold flex items-center gap-2"><Calendar size={20} className="text-av-primary"/> Economic Calendar</h3>
@@ -245,11 +227,29 @@ const fetchTimes = async () => {
                        const eventDate = new Date(ev.date);
                        const isInvalid = isNaN(eventDate.getTime());
                        const nowCairo = times?.cairo || new Date();
-                       const isPast = !isInvalid && eventDate < nowCairo;
-                       const relative = !isInvalid ? getRelativeTime(ev.date, nowCairo) : '';
+                       
+                       // Determine if it's a holiday – always gray
+                       const isHoliday = ev.impact === 'holiday';
+                       
+                       // Past logic (only for non-holiday events)
+                       const isPast = !isInvalid && !isHoliday && (ev.is_all_day
+                         ? (new Date(ev.date).setHours(0,0,0,0) < new Date(nowCairo).setHours(0,0,0,0))
+                         : eventDate < nowCairo
+                       );
+                       
+                       const relative = !isInvalid && !isHoliday ? getRelativeTime(ev.date, nowCairo) : '';
+                       
+                       // Row styling: holiday => always gray; otherwise bold if not past
+                       const rowClass = isHoliday || isPast
+                         ? 'text-gray-400 font-normal'
+                         : 'text-av-text font-bold';
+                         
                        return (
-                         <tr key={idx} className={`border-b border-av-border/40 hover:bg-av-bg/50 ${isPast ? 'text-gray-500 font-normal' : 'text-av-text font-bold'}`}>
-                           <td className="py-3 pr-3 font-mono">{ev.time}{relative && <span className="ml-1 text-[10px] opacity-70">({relative})</span>}</td>
+                         <tr key={idx} className={`border-b border-av-border/40 hover:bg-av-bg/50 ${rowClass}`}>
+                           <td className="py-3 pr-3 font-mono">
+                             {ev.is_all_day ? 'All Day' : ev.time}
+                             {!ev.is_all_day && relative && <span className="ml-1 text-[10px] opacity-70">({relative})</span>}
+                           </td>
                            <td className="py-3 pr-3">{ev.currency}</td>
                            <td className="py-3 pr-3">{ev.event}</td>
                            <td className="py-3 pr-3"><ImpactFolder impact={ev.impact}/></td>
@@ -272,7 +272,20 @@ const fetchTimes = async () => {
 
 function ImpactFolder({ impact }) {
   let color = 'text-yellow-400', label = 'Low';
-  if (impact === 'high') { color = 'text-av-danger'; label = 'High'; }
-  else if (impact === 'medium') { color = 'text-av-warning'; label = 'Medium'; }
-  return <span className={`inline-flex items-center gap-1.5 font-medium ${color}`}><Folder size={16} className="fill-current"/><span className="text-xs">{label}</span></span>;
+  if (impact === 'high') {
+    color = 'text-av-danger';
+    label = 'High';
+  } else if (impact === 'medium') {
+    color = 'text-av-warning';
+    label = 'Medium';
+  } else if (impact === 'holiday') {
+    color = 'text-gray-400';
+    label = 'Holiday';
+  }
+  return (
+    <span className={`inline-flex items-center gap-1.5 font-medium ${color}`}>
+      <Folder size={16} className="fill-current" />
+      <span className="text-xs">{label}</span>
+    </span>
+  );
 }

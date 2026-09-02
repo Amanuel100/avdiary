@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
-import { Shield, User, Lock, ArrowRight, BookOpen } from 'lucide-react';
+import { Shield, User, Lock, ArrowRight } from 'lucide-react'; // removed BookOpen
 import { authAPI } from '../api';
-import { useUser } from '../context/UserContext';   // ← new import
+import { useUser } from '../context/UserContext';
 
 export default function AdminLogin({ setIsLoggedIn }) {
   const navigate = useNavigate();
-  const { updateUser } = useUser();   // ← new line
+  const { updateUser } = useUser();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -23,7 +23,6 @@ export default function AdminLogin({ setIsLoggedIn }) {
     try {
       const data = await authAPI.login({ email, password });
 
-      // Check if the logged‑in user is actually an admin
       if (data.user.role !== 'admin') {
         toast.error('Access denied. Admin credentials required.');
         setLoading(false);
@@ -31,7 +30,7 @@ export default function AdminLogin({ setIsLoggedIn }) {
       }
 
       localStorage.setItem('avdiary-token', data.token);
-      updateUser(data.user);            // ← store full user object in context
+      updateUser(data.user);
       setIsLoggedIn(true);
       toast.success('Welcome, Admin');
       navigate('/aman');
@@ -47,17 +46,14 @@ export default function AdminLogin({ setIsLoggedIn }) {
       <Toaster position="top-center" toastOptions={{ style: { background: '#111827', color: '#f8fafc', border: '1px solid #1e293b' } }} />
 
       <div className="glass-card w-full max-w-md p-8 animate-slide-up relative">
-        {/* Logo */}
+        {/* Logo centered */}
         <div className="flex items-center gap-2 mb-6 justify-center">
-          <div className="w-9 h-9 bg-av-primary rounded-lg flex items-center justify-center">
-            <BookOpen size={18} className="text-white" />
-          </div>
+          <img src="/favicon.png" alt="AvDiary" className="h-9 w-auto" />
           <span className="text-2xl font-bold text-av-text">
             Av<span className="text-av-primary">Diary</span>
           </span>
         </div>
 
-        {/* Shield icon */}
         <div className="p-4 rounded-full bg-av-primary/10 w-fit mx-auto mb-4 ring-2 ring-av-primary/30 ring-offset-4 ring-offset-av-bg">
           <Shield size={28} className="text-av-primary" />
         </div>

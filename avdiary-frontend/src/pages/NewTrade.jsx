@@ -38,7 +38,20 @@ const EMOTION_OPTIONS = [
 ];
 
 const RR_OPTIONS = ['1:1', '1:2', '1:3', '1:4', '1:5', '2:1', '3:1', 'Other'];
-const WICK_BODY_OPTIONS = ['Wick', 'Body'];
+
+// ------ Exit Type & Method ------
+const EXIT_TYPES = {
+  tp: 'Take Profit',
+  sl: 'Stop Loss',
+  be: 'Break Even',
+  manual: 'Manual Close',
+};
+
+const EXIT_METHODS = {
+  wick: 'Wick',
+  body: 'Body',
+  market: 'Market Order',
+};
 
 export default function NewTradePage() {
   const navigate = useNavigate();
@@ -46,7 +59,7 @@ export default function NewTradePage() {
 
   const now = new Date();
   const eatTime = new Date(now.getTime() + 3 * 60 * 60 * 1000);
-  const defaultTime = eatTime.toISOString().slice(0, 16); // "YYYY-MM-DDTHH:MM"
+  const defaultTime = eatTime.toISOString().slice(0, 16);
 
   const [form, setForm] = useState({
     start_time: defaultTime,
@@ -61,11 +74,11 @@ export default function NewTradePage() {
     emotion: '',
     risk_reward: '',
     customRR: '',
-    tp_type: '',
-    sl_type: '',
-    breakeven: false,
     notes: '',
     screenshot_url: '',
+    // New fields
+    exit_type: '',
+    exit_method: '',
   });
 
   const handleChange = (e) => {
@@ -90,6 +103,7 @@ export default function NewTradePage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Validations
     if (!form.pair.trim()) { toast.error('Currency pair is required'); return; }
     if (!form.start_time) { toast.error('Start time is required'); return; }
     if (!form.end_time) { toast.error('End time is required'); return; }
@@ -102,8 +116,13 @@ export default function NewTradePage() {
     if (!form.emotion) { toast.error('Emotion is required'); return; }
     if (!form.risk_reward) { toast.error('Risk:Reward is required'); return; }
     if (form.risk_reward === 'Other' && !form.customRR.trim()) { toast.error('Specify custom R:R'); return; }
-    if (!form.tp_type) { toast.error('TP type is required'); return; }
-    if (!form.sl_type) { toast.error('SL type is required'); return; }
+
+    // New validations
+    if (!form.exit_type) { toast.error('Exit type is required'); return; }
+    if (form.exit_type !== 'be' && !form.exit_method) {
+      toast.error('Exit method is required when not break-even');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -118,11 +137,10 @@ export default function NewTradePage() {
         influence: form.influence === 'Other' ? form.customInfluence.trim() : form.influence,
         emotion: form.emotion,
         risk_reward: form.risk_reward === 'Other' ? form.customRR.trim() : form.risk_reward,
-        tp_type: form.tp_type,
-        sl_type: form.sl_type,
-        breakeven: form.breakeven,
         notes: form.notes.trim() || null,
         screenshot_url: form.screenshot_url.trim() || null,
+        exit_type: form.exit_type,
+        exit_method: form.exit_type === 'be' ? null : form.exit_method,
       };
 
       const token = localStorage.getItem('avdiary-token');
@@ -147,6 +165,8 @@ export default function NewTradePage() {
       setLoading(false);
     }
   };
+
+  const isExitMethodDisabled = form.exit_type === 'be';
 
   return (
     <div className="max-w-2xl mx-auto space-y-5 animate-fade-in">
@@ -240,24 +260,56 @@ export default function NewTradePage() {
           <input type="url" name="tradingview_url" value={form.tradingview_url} onChange={handleChange} placeholder="https://www.tradingview.com/chart/..." className="input-av" required />
         </div>
 
-        {/* R:R + TP Type + SL Type */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-av-muted mb-1.5">Risk:Reward *</label>
-            <select name="risk_reward" value={form.risk_reward} onChange={handleChange} className="input-av" required>
-              <option value="">Select R:R</option>
-              {RR_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
-            {form.risk_reward === 'Other' && (
-              <input type="text" name="customRR" value={form.customRR} onChange={handleChange} placeholder="e.g. 1:2.5" className="input-av mt-2" required />
-            )}
-          </div>
+        {/* Risk:Reward */}
+        <div>
+          <label className="block text-sm font-medium text-av-muted mb-1.5">Risk:Reward *</label>
+          <select name="risk_reward" value={form.risk_reward} onChange={handleChange} className="input-av" required>
+            <option value="">Select R:R</option>
+            {RR_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+          {form.risk_reward === 'Other' && (
+            <input type="text" name="customRR" value={form.customRR} onChange={handleChange} placeholder="e.g. 1:2.5" className="input-av mt-2" required />
+          )}
         </div>
 
-        {/* Break-even checkbox */}
-        <div className="flex items-center gap-2">
-          <input type="checkbox" id="breakeven" name="breakeven" checked={form.breakeven} onChange={handleChange} className="w-4 h-4 rounded border-av-border" />
-          <label htmlFor="breakeven" className="text-sm text-av-muted">Trade hit break‑even (no profit, no loss)</label>
+        {/* ------ Exit Type & Method ------ */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-av-muted mb-1.5">Exit Type *</label>
+            <select
+              name="exit_type"
+              value={form.exit_type}
+              onChange={handleChange}
+              className="input-av"
+              required
+            >
+              <option value="">Select exit type</option>
+              {Object.entries(EXIT_TYPES).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-av-muted mb-1.5">
+              Exit Method {form.exit_type === 'be' ? '' : '*'}
+            </label>
+            <select
+              name="exit_method"
+              value={form.exit_method}
+              onChange={handleChange}
+              className="input-av"
+              disabled={isExitMethodDisabled}
+              required={!isExitMethodDisabled}
+            >
+              <option value="">{isExitMethodDisabled ? 'N/A' : 'Select method'}</option>
+              {Object.entries(EXIT_METHODS).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+            {isExitMethodDisabled && (
+              <p className="text-xs text-av-muted mt-1">Exit method not required for Break Even.</p>
+            )}
+          </div>
         </div>
 
         {/* Influence factor */}

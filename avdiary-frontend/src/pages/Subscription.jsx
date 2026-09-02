@@ -3,7 +3,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import {
   ShieldCheck, Clock, AlertCircle, CheckCircle, Gift, X, Send, Camera, Loader
 } from 'lucide-react';
-import { paymentsAPI, authAPI } from '../api';   // ← authAPI imported
+import { paymentsAPI, authAPI } from '../api';
 import { useUser } from '../context/UserContext';
 
 const POINTS_COST = { '1_month': 400, '4_months': 1500, '1_year': 5000 };
@@ -15,10 +15,13 @@ const plans = [
 ];
 
 export default function SubscriptionPage() {
-  const { user, updateUser } = useUser();   // ← updateUser destructured
+  const { user, updateUser } = useUser();
   const [activeSubscription, setActiveSubscription] = useState(null);
   const [paymentStatus, setPaymentStatus] = useState(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
+
+  // Countdown state
+  const [timeLeft, setTimeLeft] = useState(null);
 
   // Telebirr modal state
   const [telebirrModal, setTelebirrModal] = useState(null);
@@ -30,7 +33,7 @@ export default function SubscriptionPage() {
   const [insufficientModal, setInsufficientModal] = useState(null);
   const [successModal, setSuccessModal] = useState(null);
 
-  // ---------- Refresh user profile (sync context with backend) ----------
+  // ---------- Refresh user profile ----------
   const refreshUser = async () => {
     try {
       const data = await authAPI.getProfile();
@@ -64,6 +67,33 @@ export default function SubscriptionPage() {
     };
     fetchStatus();
   }, []);
+
+  // ---------- Countdown timer ----------
+  useEffect(() => {
+    if (!activeSubscription || !activeSubscription.expiry) {
+      setTimeLeft(null);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const now = new Date();
+      const expiry = new Date(activeSubscription.expiry);
+      const diff = expiry - now;
+
+      if (diff <= 0) {
+        setTimeLeft({ expired: true });
+        clearInterval(interval);
+      } else {
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+        setTimeLeft({ days, hours, minutes, seconds, expired: false });
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [activeSubscription]);
 
   // ---------- Telebirr flow ----------
   const openTelebirrModal = (plan) => {
@@ -103,7 +133,7 @@ export default function SubscriptionPage() {
       setPaymentStatus('pending');
       setTelebirrModal(null);
       toast.success('Payment submitted! Awaiting admin confirmation.');
-      refreshUser();   // ← sync context (though tier may still be free until admin confirms)
+      refreshUser();
     } catch (err) {
       toast.error(err.message || 'Payment submission failed');
     } finally {
@@ -122,25 +152,31 @@ export default function SubscriptionPage() {
     }
   };
 
- const confirmPointsSubscription = async () => {
-  // Update the user context immediately with the new subscription tier
-  const newTier = POINTS_COST[successModal.plan] === 400 ? '1_month' :
-                  POINTS_COST[successModal.plan] === 1500 ? '4_months' : '1_year';
+  const confirmPointsSubscription = async () => {
+    const newTier = POINTS_COST[successModal.plan] === 400 ? '1_month' :
+                    POINTS_COST[successModal.plan] === 1500 ? '4_months' : '1_year';
 
-  updateUser({
-    ...user,
-    subscription_tier: newTier,
-    points: user.points - successModal.cost,
-  });
+    updateUser({
+      ...user,
+      subscription_tier: newTier,
+      points: user.points - successModal.cost,
+    });
 
-  setActiveSubscription({ plan: successModal.plan, expiry: null });
-  setPaymentStatus('confirmed');
-  setSuccessModal(null);
-  toast.success(`Subscribed to ${successModal.plan} using points!`);
+    setActiveSubscription({ plan: successModal.plan, expiry: null });
+    setPaymentStatus('confirmed');
+    setSuccessModal(null);
+    toast.success(`Subscribed to ${successModal.plan} using points!`);
+    refreshUser();
+  };
 
-  // Still try to sync with backend (once the backend endpoint is ready)
-  refreshUser();
-};
+  // ---------- Render ----------
+  if (loadingStatus) {
+    return (
+      <div className="flex justify-center py-20">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-av-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
@@ -161,22 +197,45 @@ export default function SubscriptionPage() {
         <div className="text-xs text-av-muted">Redeemable for free months</div>
       </div>
 
-      {/* Active subscription banner */}
+      {/* Active subscription banner with countdown */}
       {activeSubscription && (
-        <div className="glass-card p-5 flex items-center gap-3 bg-av-accent/5 border border-av-accent/30">
-          <ShieldCheck className="text-av-accent" size={24} />
-          <div>
-            <p className="font-semibold text-av-text">Active: {activeSubscription.plan}</p>
-            {activeSubscription.expiry && (
+        <div className={`glass-card p-5 flex items-center gap-3 border ${
+          timeLeft?.expired ? 'bg-av-danger/5 border-av-danger/40' : 'bg-av-accent/5 border-av-accent/30'
+        }`}>
+          <ShieldCheck className={timeLeft?.expired ? 'text-av-danger' : 'text-av-accent'} size={24} />
+          <div className="flex-1">
+            <p className="font-semibold text-av-text">
+              Active: {activeSubscription.plan}
+              {timeLeft?.expired && (
+                <span className="ml-2 text-sm font-bold text-av-danger">(Expired)</span>
+              )}
+            </p>
+            {activeSubscription.expiry && !timeLeft?.expired && (
               <p className="text-sm text-av-muted">
-                Expires: {new Date(activeSubscription.expiry).toLocaleDateString('en-US', { timeZone: 'Africa/Addis_Ababa' })}
+                Expires in:{' '}
+                <span className="font-mono font-bold text-av-text">
+                  {timeLeft?.days}d {String(timeLeft?.hours).padStart(2,'0')}h {String(timeLeft?.minutes).padStart(2,'0')}m {String(timeLeft?.seconds).padStart(2,'0')}s
+                </span>
+              </p>
+            )}
+            {timeLeft?.expired && (
+              <p className="text-sm text-av-danger font-medium">
+                Your subscription has expired. Renew now to keep access.
               </p>
             )}
           </div>
+          {timeLeft?.expired && (
+            <button
+              onClick={() => window.location.reload()}
+              className="btn-av-primary text-sm"
+            >
+              Renew
+            </button>
+          )}
         </div>
       )}
 
-      {/* Pricing cards */}
+      {/* Pricing cards – unchanged */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {plans.map((plan) => (
           <div key={plan.name} className="glass-card p-6 flex flex-col transition-all duration-300 hover:border-av-primary/30 hover:scale-[1.02]">
@@ -203,7 +262,6 @@ export default function SubscriptionPage() {
               ))}
             </ul>
 
-            {/* Buttons – always visible */}
             <div className="space-y-2 mt-auto">
               <button
                 onClick={() => openTelebirrModal(plan)}
@@ -241,7 +299,7 @@ export default function SubscriptionPage() {
         ))}
       </div>
 
-      {/* Payment status messages */}
+      {/* Payment status messages – unchanged */}
       {paymentStatus === 'pending' && !activeSubscription && (
         <div className="glass-card p-6 flex items-center gap-3 text-yellow-400">
           <Clock size={24} />
@@ -261,7 +319,7 @@ export default function SubscriptionPage() {
         </div>
       )}
 
-      {/* ---------- Telebirr Payment Modal ---------- */}
+      {/* Telebirr Modal */}
       {telebirrModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="glass-card w-full max-w-md p-6 animate-slide-up">
@@ -302,7 +360,7 @@ export default function SubscriptionPage() {
         </div>
       )}
 
-      {/* ---------- Insufficient Points Modal ---------- */}
+      {/* Insufficient Points Modal */}
       {insufficientModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="glass-card p-6 max-w-sm w-full text-center animate-slide-up">
@@ -318,7 +376,7 @@ export default function SubscriptionPage() {
         </div>
       )}
 
-      {/* ---------- Success Modal (points) ---------- */}
+      {/* Success Modal (points) */}
       {successModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="glass-card p-6 max-w-sm w-full text-center animate-slide-up">

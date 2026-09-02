@@ -10,7 +10,7 @@ import Footer from './Footer';
 import { useUser } from '../context/UserContext';
 import { messagesAPI, referralAPI, authAPI } from '../api';
 
-// ---------- Chat Panel (text + voice) – defined outside Layout ----------
+// ---------- Chat Panel (same as before) ----------
 function ChatPanel({ onClose }) {
   const [messages, setMessages] = useState([
     { role: 'assistant', content: 'Hello! Ask me anything about your trading performance.', time: new Date().toISOString() },
@@ -74,7 +74,6 @@ function ChatPanel({ onClose }) {
 
   return (
     <div className="fixed bottom-24 right-6 z-50 w-80 sm:w-96 h-[450px] glass-card border border-av-primary/30 shadow-2xl rounded-2xl flex flex-col animate-slide-up overflow-hidden">
-      {/* Header */}
       <div className="flex items-center justify-between p-3 border-b border-av-border">
         <div className="flex items-center gap-2">
           <MessageCircle size={18} className="text-av-primary" />
@@ -82,8 +81,6 @@ function ChatPanel({ onClose }) {
         </div>
         <button onClick={onClose} className="text-av-muted hover:text-av-text"><X size={18} /></button>
       </div>
-
-      {/* Messages */}
       <div className="flex-1 p-3 overflow-y-auto space-y-3 text-sm">
         {messages.map((msg, idx) => (
           <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -103,8 +100,6 @@ function ChatPanel({ onClose }) {
         )}
         <div ref={messagesEndRef} />
       </div>
-
-      {/* Input area with voice button */}
       <div className="p-3 border-t border-av-border">
         <div className="flex items-center gap-2">
           <input
@@ -116,7 +111,6 @@ function ChatPanel({ onClose }) {
             className="input-av text-sm flex-1"
             disabled={loading}
           />
-          {/* Voice button */}
           <button
             onClick={startListening}
             disabled={listening}
@@ -140,7 +134,7 @@ function ChatPanel({ onClose }) {
   );
 }
 
-// ---------- Main Layout Component ----------
+// ---------- Main Layout ----------
 export default function Layout({ children, isLoggedIn, setIsLoggedIn }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
@@ -152,7 +146,6 @@ export default function Layout({ children, isLoggedIn, setIsLoggedIn }) {
   const profileRef = useRef(null);
   const { user, updateUser } = useUser();
 
-  // ---------- Real unread message count ----------
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
@@ -160,17 +153,13 @@ export default function Layout({ children, isLoggedIn, setIsLoggedIn }) {
       try {
         const data = await messagesAPI.getAll({ limit: 1 });
         setUnreadCount(data.unread || 0);
-      } catch (error) {
-        // keep existing count if fetch fails
-      }
+      } catch (error) {}
     };
-
     fetchUnread();
     const interval = setInterval(fetchUnread, 30000);
     return () => clearInterval(interval);
   }, []);
 
-  // Keep user profile (points, subscription) in sync with backend every 30 seconds
   useEffect(() => {
     const syncProfile = async () => {
       if (!localStorage.getItem('avdiary-token')) return;
@@ -179,17 +168,13 @@ export default function Layout({ children, isLoggedIn, setIsLoggedIn }) {
         if (data.user) {
           updateUser(data.user);
         }
-      } catch (err) {
-        // ignore errors
-      }
+      } catch (err) {}
     };
-
     syncProfile();
     const interval = setInterval(syncProfile, 30000);
     return () => clearInterval(interval);
   }, []);
 
-  // Sync name and image on mount (without touching subscription_tier)
   useEffect(() => {
     const syncProfile = async () => {
       if (!localStorage.getItem('avdiary-token')) return;
@@ -208,7 +193,6 @@ export default function Layout({ children, isLoggedIn, setIsLoggedIn }) {
     syncProfile();
   }, []);
 
-  // Listen for message updates (mark as read from other places)
   useEffect(() => {
     const handleMessagesUpdated = () => {
       messagesAPI.getAll({ limit: 1 }).then(data => {
@@ -219,23 +203,18 @@ export default function Layout({ children, isLoggedIn, setIsLoggedIn }) {
     return () => window.removeEventListener('messages-updated', handleMessagesUpdated);
   }, []);
 
-  // ---------- Real friend count for sidebar ----------
   const [friendCount, setFriendCount] = useState(0);
-
   useEffect(() => {
     const fetchFriendCount = async () => {
       if (!localStorage.getItem('avdiary-token')) return;
       try {
         const refData = await referralAPI.getInfo();
         setFriendCount(refData.friends ? refData.friends.length : 0);
-      } catch (err) {
-        // keep count at 0 on error
-      }
+      } catch (err) {}
     };
     fetchFriendCount();
   }, []);
 
-  // ---------- Update browser tab title ----------
   useEffect(() => {
     document.title = unreadCount > 0
       ? `(${unreadCount}) AvDiary – Smart Trading Journal`
@@ -274,27 +253,24 @@ export default function Layout({ children, isLoggedIn, setIsLoggedIn }) {
   return (
     <div className="min-h-screen flex flex-col bg-av-bg">
       <div className="flex flex-1">
-        {/* ---------- Desktop Sidebar ---------- */}
+        {/* Desktop Sidebar */}
         <aside className={`hidden lg:flex flex-col ${sidebarWidth} bg-av-surface border-r border-av-border p-2 transition-all duration-300`}>
           {/* Logo */}
           <div className={`flex items-center ${desktopCollapsed ? 'justify-center' : 'justify-start'} mb-8 mt-2 px-2`}>
             {!desktopCollapsed ? (
               <Link to="/" className="flex items-center gap-2">
-                <div className="w-9 h-9 bg-av-primary rounded-lg flex items-center justify-center">
-                  <BookOpen size={18} className="text-white" />
-                </div>
+                <img src="/favicon.png" alt="AvDiary" className="h-8 w-auto" />
                 <span className="text-xl font-bold text-av-text">
                   Av<span className="text-av-primary">Diary</span>
                 </span>
               </Link>
             ) : (
-              <div className="w-9 h-9 bg-av-primary rounded-lg flex items-center justify-center">
-                <BookOpen size={18} className="text-white" />
-              </div>
+              <Link to="/" className="flex items-center justify-center">
+                <img src="/favicon.png" alt="AvDiary" className="h-8 w-auto" />
+              </Link>
             )}
           </div>
 
-          {/* Navigation */}
           <nav className="flex-1 space-y-1">
             {navItems.map(({ href, label, icon: Icon }) => (
               <Link
@@ -327,7 +303,6 @@ export default function Layout({ children, isLoggedIn, setIsLoggedIn }) {
             ))}
           </nav>
 
-          {/* Referral widget with real points and friend count */}
           {!desktopCollapsed && (
             <Link to="/referral" className="glass-card p-3 mb-4 hover:border-av-primary/30 transition-all">
               <div className="flex items-center gap-2">
@@ -346,7 +321,6 @@ export default function Layout({ children, isLoggedIn, setIsLoggedIn }) {
             </Link>
           )}
 
-          {/* User section */}
           <div className="border-t border-av-border pt-4 mt-4">
             <div className={`flex items-center gap-3 px-2 ${desktopCollapsed ? 'justify-center' : ''}`}>
               <div className="w-9 h-9 rounded-full bg-av-primary/20 flex items-center justify-center overflow-hidden">
@@ -384,9 +358,8 @@ export default function Layout({ children, isLoggedIn, setIsLoggedIn }) {
           </div>
         </aside>
 
-        {/* ---------- Main content area ---------- */}
+        {/* Main content */}
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Top bar */}
           <header className="h-16 bg-av-surface border-b border-av-border flex items-center justify-between px-4 lg:px-6 sticky top-0 z-40">
             <div className="flex items-center gap-2">
               <button
@@ -395,7 +368,6 @@ export default function Layout({ children, isLoggedIn, setIsLoggedIn }) {
               >
                 <Menu size={20} />
               </button>
-
               <button
                 className="hidden lg:block p-2 text-av-muted hover:text-av-text"
                 onClick={() => setDesktopCollapsed(!desktopCollapsed)}
@@ -403,7 +375,6 @@ export default function Layout({ children, isLoggedIn, setIsLoggedIn }) {
               >
                 <Menu size={20} />
               </button>
-
               <h1 className="text-lg font-semibold text-av-text hidden sm:block">
                 {navItems.find(item => isActive(item.href))?.label || 'Dashboard'}
               </h1>
@@ -413,8 +384,6 @@ export default function Layout({ children, isLoggedIn, setIsLoggedIn }) {
               <button onClick={toggleTheme} className="p-2 text-av-muted hover:text-av-text rounded-lg transition-colors">
                 {darkMode ? <Sun size={18} /> : <Moon size={18} />}
               </button>
-
-              {/* Notification bell */}
               <Link to="/messages" className="relative p-2 text-av-muted hover:text-av-text">
                 <Bell size={20} />
                 {unreadCount > 0 && (
@@ -423,8 +392,6 @@ export default function Layout({ children, isLoggedIn, setIsLoggedIn }) {
                   </span>
                 )}
               </Link>
-
-              {/* Profile dropdown */}
               <div className="relative" ref={profileRef}>
                 <button
                   onClick={() => setProfileOpen(!profileOpen)}
@@ -439,7 +406,6 @@ export default function Layout({ children, isLoggedIn, setIsLoggedIn }) {
                   </div>
                   <ChevronDown size={14} className="hidden sm:block" />
                 </button>
-
                 {profileOpen && (
                   <div className="absolute right-0 mt-2 w-48 glass-card border border-av-border rounded-xl shadow-lg py-1 z-50 animate-fade-in">
                     <button
@@ -465,22 +431,21 @@ export default function Layout({ children, isLoggedIn, setIsLoggedIn }) {
           <main className="flex-1 p-[5px] overflow-x-hidden">
             {children}
           </main>
-
           <Footer />
         </div>
       </div>
 
-      {/* ---------- Mobile Sidebar (slide-over) ---------- */}
+      {/* Mobile Sidebar */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
           <div className="absolute left-0 top-0 bottom-0 w-64 bg-av-surface border-r border-av-border p-4 flex flex-col animate-slide-up">
             <div className="flex items-center justify-between mb-8">
               <Link to="/" className="flex items-center gap-2" onClick={() => setSidebarOpen(false)}>
-                <div className="w-8 h-8 bg-av-primary rounded-lg flex items-center justify-center">
-                  <BookOpen size={16} className="text-white" />
-                </div>
-                <span className="text-lg font-bold text-av-text">Av<span className="text-av-primary">Diary</span></span>
+                <img src="/favicon.png" alt="AvDiary" className="h-8 w-auto" />
+                <span className="text-lg font-bold text-av-text">
+                  Av<span className="text-av-primary">Diary</span>
+                </span>
               </Link>
               <button onClick={() => setSidebarOpen(false)} className="p-1 text-av-muted hover:text-av-text">
                 <X size={20} />
@@ -544,7 +509,7 @@ export default function Layout({ children, isLoggedIn, setIsLoggedIn }) {
         </div>
       )}
 
-      {/* ---------- Floating AI Chat Button ---------- */}
+      {/* Floating AI Chat Button */}
       <button
         onClick={() => setChatOpen(!chatOpen)}
         className="fixed bottom-6 right-6 z-50 p-4 rounded-full bg-av-primary text-white shadow-lg hover:bg-blue-600 transition-all duration-300 flex items-center justify-center border-2 border-av-primary/50 hover:border-av-primary animate-pulse-slow group"

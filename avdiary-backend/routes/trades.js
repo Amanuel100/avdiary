@@ -14,7 +14,8 @@ router.get('/', async (req, res) => {
     const [trades] = await pool.execute(
       `SELECT id, pair, position, pnl, session, date, start_time, end_time,
               tradingview_url, influence, emotion, notes, screenshot_url,
-              risk_reward, tp_type, sl_type, breakeven
+              risk_reward AS rr, tp_type, sl_type, breakeven,
+              exit_type, exit_method
        FROM trades
        WHERE user_id = ?
        ORDER BY date DESC
@@ -47,7 +48,8 @@ router.post('/', async (req, res) => {
       pair, position, pnl, session,
       start_time, end_time, tradingview_url,
       influence, emotion, notes, screenshot_url,
-      risk_reward, tp_type, sl_type, breakeven  // ← new fields
+      risk_reward, tp_type, sl_type, breakeven,
+      exit_type, exit_method
     } = req.body;
 
     if (!pair || !position) {
@@ -58,13 +60,15 @@ router.post('/', async (req, res) => {
     await pool.execute(
       `INSERT INTO trades (id, user_id, pair, position, pnl, session, date, start_time, end_time,
         tradingview_url, influence, emotion, notes, screenshot_url,
-        risk_reward, tp_type, sl_type, breakeven)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        risk_reward, tp_type, sl_type, breakeven,
+        exit_type, exit_method)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id, userId, pair.toUpperCase(), position.toUpperCase(), pnl || 0, session || null,
         start_time || null, start_time || null, end_time || null,
         tradingview_url || null, influence || null, emotion || null, notes || null, screenshot_url || null,
         risk_reward || null, tp_type || null, sl_type || null, breakeven ? 1 : 0,
+        exit_type || null, exit_method || null
       ]
     );
 
@@ -90,18 +94,21 @@ router.put('/:id', async (req, res) => {
       pair, position, pnl, session,
       start_time, end_time, tradingview_url,
       influence, emotion, notes, screenshot_url,
-      risk_reward, tp_type, sl_type, breakeven
+      risk_reward, tp_type, sl_type, breakeven,
+      exit_type, exit_method
     } = req.body;
 
     await pool.execute(
       `UPDATE trades SET pair=?, position=?, pnl=?, session=?, start_time=?, end_time=?,
        tradingview_url=?, influence=?, emotion=?, notes=?, screenshot_url=?,
-       risk_reward=?, tp_type=?, sl_type=?, breakeven=?
+       risk_reward=?, tp_type=?, sl_type=?, breakeven=?,
+       exit_type=?, exit_method=?
        WHERE id=? AND user_id=?`,
       [
         pair.toUpperCase(), position.toUpperCase(), pnl, session,
         start_time, end_time, tradingview_url, influence, emotion, notes, screenshot_url,
         risk_reward || null, tp_type || null, sl_type || null, breakeven ? 1 : 0,
+        exit_type || null, exit_method || null,
         tradeId, userId
       ]
     );

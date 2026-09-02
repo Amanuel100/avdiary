@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
-import { User, Mail, Lock, BookOpen, Hash } from 'lucide-react';
+import { User, Mail, Lock, Hash } from 'lucide-react'; // removed BookOpen
 import { useUser } from '../context/UserContext';
 import { authAPI } from '../api';
 
@@ -62,15 +62,16 @@ export default function Register({ setIsLoggedIn }) {
         <Toaster position="top-center" toastOptions={{ style: { background: '#111827', color: '#f8fafc', border: '1px solid #1e293b' } }} />
         <div className="glass-card w-full max-w-md p-8 animate-slide-up relative">
           <Link to="/" className="absolute top-4 left-4 flex items-center gap-2">
-            <div className="w-7 h-7 bg-av-primary rounded-lg flex items-center justify-center">
-              <BookOpen size={14} className="text-white" />
-            </div>
-            <span className="text-lg font-bold text-av-text">Av<span className="text-av-primary">Diary</span></span>
+            <img src="/favicon.png" alt="AvDiary" className="h-7 w-auto" />
+            <span className="text-lg font-bold text-av-text">
+              Av<span className="text-av-primary">Diary</span>
+            </span>
           </Link>
 
           <div className="mt-8">
             <h1 className="text-xl font-semibold text-av-text text-center mb-6">Create your free account</h1>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* ... form fields unchanged ... */}
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-av-muted" />
                 <input type="text" name="name" placeholder="Full name" value={form.name} onChange={handleChange} className="input-av pl-10" required />

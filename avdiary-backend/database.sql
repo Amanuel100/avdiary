@@ -127,3 +127,14 @@ ALTER TABLE trades
   --this is seconde update
 
   ALTER TABLE users MODIFY COLUMN image MEDIUMTEXT;
+
+  -- this is third update
+  ALTER TABLE calendar_events ADD COLUMN is_all_day TINYINT(1) DEFAULT 0;
+
+  -- this is fourth update
+  ALTER TABLE calendar_events MODIFY impact ENUM('high','medium','low','holiday') NOT NULL DEFAULT 'low';
+
+  -- this is fifth update
+  ALTER TABLE trades
+ADD COLUMN exit_type VARCHAR(20) DEFAULT NULL,
+ADD COLUMN exit_method VARCHAR(20) DEFAULT NULL;

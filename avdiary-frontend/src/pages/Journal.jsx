@@ -87,8 +87,8 @@ export default function Journal() {
   const [filterSession, setFilterSession] = useState('');
   const [filterPosition, setFilterPosition] = useState('');
   const [viewMode, setViewMode] = useState('grid');
-  const [currentMonth, setCurrentMonth] = useState(6);
-  const [currentYear, setCurrentYear] = useState(2026);
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [showCalendar, setShowCalendar] = useState(false);
   const [page, setPage] = useState(1);
   const perPage = 8;
@@ -126,9 +126,10 @@ export default function Journal() {
   }, [trades, selectedDate, searchPair, filterSession, filterPosition]);
 
   const chartData = useMemo(() => {
-    const win = filteredTrades.filter(t => t.pnl > 0).length;
-    const loss = filteredTrades.filter(t => t.pnl < 0).length;
-    const be = filteredTrades.filter(t => t.pnl === 0).length;
+    // FIX: Convert pnl to Number before comparisons
+    const win = filteredTrades.filter(t => Number(t.pnl) > 0).length;
+    const loss = filteredTrades.filter(t => Number(t.pnl) < 0).length;
+    const be = filteredTrades.filter(t => Number(t.pnl) === 0).length;
     const pieData = [
       { name: 'Win', value: win, color: '#14b8a6' },
       { name: 'Loss', value: loss, color: '#ef4444' },

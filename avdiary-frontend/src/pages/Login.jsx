@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
-import { Mail, Lock, ArrowRight, BookOpen } from 'lucide-react';
+import { Mail, Lock, ArrowRight } from 'lucide-react'; // removed BookOpen
 import { useUser } from '../context/UserContext';
 import { authAPI } from '../api';
 
@@ -40,10 +40,10 @@ export default function Login({ setIsLoggedIn }) {
         <Toaster position="top-center" toastOptions={{ style: { background: '#111827', color: '#f8fafc', border: '1px solid #1e293b' } }} />
         <div className="glass-card w-full max-w-md p-8 animate-slide-up relative">
           <Link to="/" className="absolute top-4 left-4 flex items-center gap-2">
-            <div className="w-7 h-7 bg-av-primary rounded-lg flex items-center justify-center">
-              <BookOpen size={14} className="text-white" />
-            </div>
-            <span className="text-lg font-bold text-av-text">Av<span className="text-av-primary">Diary</span></span>
+            <img src="/favicon.png" alt="AvDiary" className="h-7 w-auto" />
+            <span className="text-lg font-bold text-av-text">
+              Av<span className="text-av-primary">Diary</span>
+            </span>
           </Link>
 
           <div className="mt-8">
@@ -62,7 +62,6 @@ export default function Login({ setIsLoggedIn }) {
               </button>
             </form>
 
-            {/* Forgot password link */}
             <p className="text-right mt-2">
               <Link to="/forgot-password" className="text-xs text-av-muted hover:text-av-primary">
                 Forgot password?

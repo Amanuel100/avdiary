@@ -42,7 +42,8 @@ export default function AdminPage() {
     impact: 'low',
     actual: '',
     forecast: '',
-    previous: ''
+    previous: '',
+    is_all_day: false,
   });
 
   // Delete calendar event modal
@@ -135,35 +136,34 @@ export default function AdminPage() {
     setEditPointsValue(u.points?.toString() || '0');
   };
 
- const savePoints = async (userId) => {
-  const newPoints = parseInt(editPointsValue, 10);
-  if (isNaN(newPoints) || newPoints < 0) {
-    toast.error('Invalid points value');
-    return;
-  }
+  const savePoints = async (userId) => {
+    const newPoints = parseInt(editPointsValue, 10);
+    if (isNaN(newPoints) || newPoints < 0) {
+      toast.error('Invalid points value');
+      return;
+    }
 
-  try {
-    const token = localStorage.getItem('avdiary-token');
-    const res = await fetch(`${BACKEND_URL}/api/admin/users/${userId}/points`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify({ points: newPoints }),
-    });
+    try {
+      const token = localStorage.getItem('avdiary-token');
+      const res = await fetch(`${BACKEND_URL}/api/admin/users/${userId}/points`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ points: newPoints }),
+      });
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to update points');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to update points');
 
-    // Update local state
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, points: newPoints } : u));
-    setEditingUserId(null);
-    toast.success('Points updated successfully');
-  } catch (err) {
-    toast.error(err.message);
-  }
-};
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, points: newPoints } : u));
+      setEditingUserId(null);
+      toast.success('Points updated successfully');
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
 
   const cancelEditing = () => setEditingUserId(null);
 
@@ -198,9 +198,14 @@ export default function AdminPage() {
   // ---------- Calendar event CRUD ----------
   const handleCalSubmit = async (e) => {
     e.preventDefault();
-    const { event_date, event_time, currency, event, impact } = calForm;
-    if (!event_date || !event_time || !currency || !event) {
+    const { event_date, event_time, currency, event, impact, is_all_day } = calForm;
+    if (!event_date || !currency || !event) {
       toast.error('Missing required fields');
+      return;
+    }
+    // If all-day, we don't require a time; otherwise time is required
+    if (!is_all_day && !event_time) {
+      toast.error('Time is required for non-all-day events');
       return;
     }
     try {
@@ -209,7 +214,11 @@ export default function AdminPage() {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       };
-      const body = JSON.stringify(calForm);
+      const body = JSON.stringify({
+        ...calForm,
+        event_time: is_all_day ? '00:00' : event_time,
+        is_all_day: is_all_day ? 1 : 0,
+      });
 
       const url = editingCalId
         ? `${BACKEND_URL}/api/calendar/admin/calendar/${editingCalId}`
@@ -228,7 +237,17 @@ export default function AdminPage() {
 
       toast.success(editingCalId ? 'Event updated' : 'Event added');
       setEditingCalId(null);
-      setCalForm({ event_date: '', event_time: '', currency: '', event: '', impact: 'low', actual: '', forecast: '', previous: '' });
+      setCalForm({
+        event_date: '',
+        event_time: '',
+        currency: '',
+        event: '',
+        impact: 'low',
+        actual: '',
+        forecast: '',
+        previous: '',
+        is_all_day: false,
+      });
       fetchCalendarAdmin();
     } catch (err) {
       console.error(err);
@@ -284,6 +303,7 @@ export default function AdminPage() {
       actual: ev.actual || '',
       forecast: ev.forecast || '',
       previous: ev.previous || '',
+      is_all_day: ev.is_all_day === 1,
     });
   };
 
@@ -471,29 +491,50 @@ export default function AdminPage() {
         <h2 className="text-lg font-semibold text-av-text mb-4 flex items-center gap-2">
           <Calendar size={20} className="text-av-primary" /> Economic Calendar Management
         </h2>
-        {/* EAT Notice */}
         <p className="text-xs text-av-muted mb-3">
-  ⚠️ All times must be in <strong>Cairo time (EET/EEST)</strong>. The market page will display them exactly as entered.
-</p>
-        {/* Add / Edit form */}
+          ⚠️ All times must be in <strong>Cairo time (EET/EEST)</strong>. The market page will display them exactly as entered.
+        </p>
         <form onSubmit={handleCalSubmit} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
           <input type="date" value={calForm.event_date} onChange={e => setCalForm({...calForm, event_date: e.target.value})} className="input-av text-sm" required />
-          <input type="time" value={calForm.event_time} onChange={e => setCalForm({...calForm, event_time: e.target.value})} className="input-av text-sm" required />
+          <input type="time" value={calForm.event_time} onChange={e => setCalForm({...calForm, event_time: e.target.value})} className="input-av text-sm" disabled={calForm.is_all_day} />
           <input type="text" placeholder="Currency (e.g. USD)" value={calForm.currency} onChange={e => setCalForm({...calForm, currency: e.target.value})} className="input-av text-sm" required />
           <input type="text" placeholder="Event name" value={calForm.event} onChange={e => setCalForm({...calForm, event: e.target.value})} className="input-av text-sm" required />
+          
+          {/* Impact dropdown – now includes "Holiday" */}
           <select value={calForm.impact} onChange={e => setCalForm({...calForm, impact: e.target.value})} className="input-av text-sm">
             <option value="high">High</option>
             <option value="medium">Medium</option>
             <option value="low">Low</option>
+            <option value="holiday">Holiday</option>
           </select>
+          
           <input type="text" placeholder="Actual" value={calForm.actual} onChange={e => setCalForm({...calForm, actual: e.target.value})} className="input-av text-sm" />
           <input type="text" placeholder="Forecast" value={calForm.forecast} onChange={e => setCalForm({...calForm, forecast: e.target.value})} className="input-av text-sm" />
           <input type="text" placeholder="Previous" value={calForm.previous} onChange={e => setCalForm({...calForm, previous: e.target.value})} className="input-av text-sm" />
+          
+          <div className="flex items-center gap-2 col-span-2">
+            <input
+              type="checkbox"
+              id="is_all_day"
+              checked={calForm.is_all_day}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setCalForm(prev => ({
+                  ...prev,
+                  is_all_day: checked,
+                  event_time: checked ? '00:00' : prev.event_time,
+                }));
+              }}
+              className="w-4 h-4 rounded border-av-border"
+            />
+            <label htmlFor="is_all_day" className="text-sm text-av-muted">All Day (24h event)</label>
+          </div>
+          
           <button type="submit" className="btn-av-primary text-sm">{editingCalId ? 'Update' : 'Add'} Event</button>
-          {editingCalId && <button type="button" onClick={() => { setEditingCalId(null); setCalForm({ event_date: '', event_time: '', currency: '', event: '', impact: 'low', actual: '', forecast: '', previous: '' }); }} className="btn-av-ghost text-sm">Cancel</button>}
+          {editingCalId && <button type="button" onClick={() => { setEditingCalId(null); setCalForm({ event_date: '', event_time: '', currency: '', event: '', impact: 'low', actual: '', forecast: '', previous: '', is_all_day: false }); }} className="btn-av-ghost text-sm">Cancel</button>}
         </form>
 
-        {/* Events table */}
+        {/* Events table – displays impact with correct styling */}
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead><tr className="text-left text-av-muted border-b border-av-border"><th className="pb-2 pr-3">Date</th><th className="pb-2 pr-3">Time (EAT)</th><th className="pb-2 pr-3">Currency</th><th className="pb-2 pr-3">Event</th><th className="pb-2 pr-3">Impact</th><th className="pb-2">Actions</th></tr></thead>
@@ -501,11 +542,19 @@ export default function AdminPage() {
               {calendarEvents.map(ev => (
                 <tr key={ev.id} className="border-b border-av-border/40 hover:bg-av-bg/30">
                   <td className="py-2 pr-3">{ev.date?.slice(0,10)}</td>
-                  <td className="py-2 pr-3">{ev.time}</td>
+                  <td className="py-2 pr-3">{ev.is_all_day ? 'All Day' : ev.time}</td>
                   <td className="py-2 pr-3">{ev.currency}</td>
                   <td className="py-2 pr-3">{ev.event}</td>
                   <td className="py-2 pr-3">
-                    <span className={`px-2 py-0.5 rounded-full text-xs ${ev.impact === 'high' ? 'bg-av-danger/20 text-av-danger' : ev.impact === 'medium' ? 'bg-av-warning/20 text-av-warning' : 'bg-yellow-400/20 text-yellow-400'}`}>{ev.impact}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs ${
+                      ev.impact === 'high' ? 'bg-av-danger/20 text-av-danger' :
+                      ev.impact === 'medium' ? 'bg-av-warning/20 text-av-warning' :
+                      ev.impact === 'low' ? 'bg-yellow-400/20 text-yellow-400' :
+                      ev.impact === 'holiday' ? 'bg-gray-400/20 text-gray-400' :
+                      'bg-gray-400/20 text-gray-400'
+                    }`}>
+                      {ev.impact === 'holiday' ? 'Holiday' : ev.impact}
+                    </span>
                   </td>
                   <td className="py-2 flex gap-2">
                     <button onClick={() => startEditCal(ev)} className="text-av-muted hover:text-av-primary" title="Edit"><Pencil size={14} /></button>
