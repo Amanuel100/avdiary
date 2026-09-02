@@ -119,7 +119,6 @@ router.put('/:id', async (req, res) => {
     return res.status(500).json({ message: 'Internal server error' });
   }
 });
-
 // ---------- DELETE /api/trades/:id ----------
 router.delete('/:id', async (req, res) => {
   try {

@@ -23,31 +23,42 @@ Keep your answers friendly, professional, and under 250 words.`;
 async function getChatReply(userMessage, tradeContext) {
   const contextStr = JSON.stringify(tradeContext, null, 2);
 
-  const completion = await groq.chat.completions.create({
-    model: 'llama-3.3-70b-versatile',
-    messages: [
-      { role: 'system', content: CHAT_SYSTEM_PROMPT },
-      { role: 'user', content: `Trader context:\n${contextStr}\n\nUser message: ${userMessage}` },
-    ],
-    max_tokens: 500,
-    temperature: 0.7,
-  });
+  try {
+    const completion = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',   // ✅ Correct production model
+      messages: [
+        { role: 'system', content: CHAT_SYSTEM_PROMPT },
+        { role: 'user', content: `Trader context:\n${contextStr}\n\nUser message: ${userMessage}` },
+      ],
+      max_tokens: 500,
+      temperature: 0.7,
+    });
 
-  return completion.choices[0]?.message?.content || 'Sorry, I had no response.';
+    return completion.choices[0]?.message?.content || 'Sorry, I had no response.';
+  } catch (error) {
+    console.error('Groq chat error:', error);
+    // Re-throw so the route can handle it
+    throw error;
+  }
 }
 
 async function getCoachingInsight(tradesJson) {
-  const completion = await groq.chat.completions.create({
-    model: 'llama-3.3-70b-versatile',
-    messages: [
-      { role: 'system', content: COACHING_SYSTEM_PROMPT },
-      { role: 'user', content: tradesJson },
-    ],
-    max_tokens: 600,
-    temperature: 0.7,
-  });
+  try {
+    const completion = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',   // ✅ Correct production model
+      messages: [
+        { role: 'system', content: COACHING_SYSTEM_PROMPT },
+        { role: 'user', content: tradesJson },
+      ],
+      max_tokens: 600,
+      temperature: 0.7,
+    });
 
-  return completion.choices[0]?.message?.content || 'No insight generated.';
+    return completion.choices[0]?.message?.content || 'No insight generated.';
+  } catch (error) {
+    console.error('Groq coaching error:', error);
+    throw error;
+  }
 }
 
 module.exports = { getChatReply, getCoachingInsight };
