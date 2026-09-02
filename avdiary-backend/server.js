@@ -4,7 +4,7 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
-const pool = require('./db');                // MySQL connection
+const pool = require('./db');
 const { authenticateToken } = require('./middleware/auth');
 
 const app = express();
@@ -14,13 +14,15 @@ const PORT = process.env.PORT || 5000;
 const allowedOrigins = [
   'https://avdiary.com.et',
   'https://www.avdiary.com.et',
-  'http://localhost:3000',          // keep for local development
+  'http://localhost:3000',
   'http://127.0.0.1:3000',
+  'https://avdiary-3726.vercel.app',   // ← add your specific Vercel URL
+  // Optionally allow all Vercel previews:
+  // 'https://*.vercel.app',
 ];
 
 app.use(cors({
   origin: function (origin, callback) {
-    // allow requests with no origin (like mobile apps, curl)
     if (!origin) return callback(null, true);
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
@@ -31,6 +33,8 @@ app.use(cors({
   },
   credentials: true,
 }));
+
+// ... rest of server.js unchanged
 
 // ---------- Body parsing ----------
 app.use(express.json({ limit: '15mb' }));
